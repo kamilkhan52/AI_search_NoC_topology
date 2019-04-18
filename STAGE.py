@@ -32,7 +32,7 @@ def reset_temperature():
     temperature = 5
 
 
-def draw_topology():
+def draw_topology(grid):
     global pos
     plt.figure(1)
     plt.clf()
@@ -125,7 +125,7 @@ def swap_app(app1, app2):
     temp_app2_to_app1 = 0
 
 
-def perturb():
+def perturb(total_perturbations):
     # ready the variables
     edges_one_d = []
     not_edges_one_d = []
@@ -137,78 +137,79 @@ def perturb():
     new_grid = grid.copy()
 
     # covert existing edges to 1-dimensional array
-    for edge in new_grid.edges:
-        edges_one_d.append(str(edge))
-    for not_edge in nx.non_edges(new_grid):
-        not_edges_one_d.append(str(not_edge))
+    for t in range(0, total_perturbations):
+        for edge in new_grid.edges:
+            edges_one_d.append(str(edge))
+        for not_edge in nx.non_edges(new_grid):
+            not_edges_one_d.append(str(not_edge))
 
-    # pick an edge from existing edges to remove
-    edge1 = np.random.choice(edges_one_d)
-    for i in edge1[2:6].split(","):
-        edge1_core1.append(int(i))
-    for i in edge1[10:14].split(","):
-        edge1_core2.append(int(i))
-
-    total_edges_for_core2 = len(new_grid.edges(tuple(edge1_core2)))
-    total_edges_for_core1 = len(new_grid.edges(tuple(edge1_core1)))
-
-    # make sure the edge selected is not the only one for a core
-    while total_edges_for_core1 <= 1 or total_edges_for_core2 <= 1:
-        edge1_core1.clear()
-        edge1_core2.clear()
+        # pick an edge from existing edges to remove
         edge1 = np.random.choice(edges_one_d)
         for i in edge1[2:6].split(","):
             edge1_core1.append(int(i))
         for i in edge1[10:14].split(","):
             edge1_core2.append(int(i))
 
-        # print("edges to remove : " + str(edge1))
-        # print("case detected: total_edges_for_core2: " + str(
-        #     total_edges_for_core2) + "case detected: total_edges_for_core1: " + str(total_edges_for_core1))
         total_edges_for_core2 = len(new_grid.edges(tuple(edge1_core2)))
         total_edges_for_core1 = len(new_grid.edges(tuple(edge1_core1)))
 
-    # covert non-existing edges to 1-dimensional array
-    edge2 = np.random.choice(not_edges_one_d)
-    for i in edge2[2:6].split(","):
-        edge2_core1.append(int(i))
-    for i in edge2[10:14].split(","):
-        edge2_core2.append(int(i))
+        # make sure the edge selected is not the only one for a core
+        while total_edges_for_core1 <= 1 or total_edges_for_core2 <= 1:
+            edge1_core1.clear()
+            edge1_core2.clear()
+            edge1 = np.random.choice(edges_one_d)
+            for i in edge1[2:6].split(","):
+                edge1_core1.append(int(i))
+            for i in edge1[10:14].split(","):
+                edge1_core2.append(int(i))
 
-    # print("core1: " + str(edge2_core1))
-    # print("core2: " + str(edge2_core2))
-    weight = math.ceil(distance.euclidean(edge2_core1, edge2_core2))  # length of the proposed link
+            # print("edges to remove : " + str(edge1))
+            # print("case detected: total_edges_for_core2: " + str(
+            #     total_edges_for_core2) + "case detected: total_edges_for_core1: " + str(total_edges_for_core1))
+            total_edges_for_core2 = len(new_grid.edges(tuple(edge1_core2)))
+            total_edges_for_core1 = len(new_grid.edges(tuple(edge1_core1)))
 
-    while weight > 4:
-        # stay till a link length of <4 is found
-        edge2_core1.clear()
-        edge2_core2.clear()
+        # covert non-existing edges to 1-dimensional array
         edge2 = np.random.choice(not_edges_one_d)
         for i in edge2[2:6].split(","):
             edge2_core1.append(int(i))
         for i in edge2[10:14].split(","):
             edge2_core2.append(int(i))
 
+        # print("core1: " + str(edge2_core1))
+        # print("core2: " + str(edge2_core2))
         weight = math.ceil(distance.euclidean(edge2_core1, edge2_core2))  # length of the proposed link
 
-    # print("edges to remove : " + str(edge1) + " and add: " + str(edge2))
-    remove_edge(tuple(edge1_core2), tuple(edge1_core1))
-    add_edge(tuple(edge2_core2), tuple(edge2_core1))
-    # clear link removal data
-    edge1_core1.clear()
-    edge1_core2.clear()
-    not_edges_one_d.clear()
-    edges_one_d.clear()
-    edge2_core1.clear()
-    edge2_core2.clear()
+        while weight > 4:
+            # stay till a link length of <4 is found
+            edge2_core1.clear()
+            edge2_core2.clear()
+            edge2 = np.random.choice(not_edges_one_d)
+            for i in edge2[2:6].split(","):
+                edge2_core1.append(int(i))
+            for i in edge2[10:14].split(","):
+                edge2_core2.append(int(i))
 
-    # pick app to swap
+            weight = math.ceil(distance.euclidean(edge2_core1, edge2_core2))  # length of the proposed link
 
-    app1 = int(random.random() * 64)
-    app2 = int(random.random() * 64)
-    # print("apps to swap are: " + str(app1) + " and " + str(app2))
+        # print("edges to remove : " + str(edge1) + " and add: " + str(edge2))
+        remove_edge(tuple(edge1_core2), tuple(edge1_core1))
+        add_edge(tuple(edge2_core2), tuple(edge2_core1))
+        # clear link removal data
+        edge1_core1.clear()
+        edge1_core2.clear()
+        not_edges_one_d.clear()
+        edges_one_d.clear()
+        edge2_core1.clear()
+        edge2_core2.clear()
 
-    swap_app(app1, app2)
+        # pick app to swap
+
+        app1 = int(random.random() * 64)
+        app2 = int(random.random() * 64)
+        # print("apps to swap are: " + str(app1) + " and " + str(app2))
+
+        swap_app(app1, app2)
 
 
 def iterate(n):
@@ -253,7 +254,7 @@ def iterate(n):
                     previous_objective))
 
         # draw_topology()
-        perturb()
+        perturb(1)
 
     if temperature > temperature_threshold:
         temperature = temperature * alpha
@@ -330,11 +331,14 @@ print(clf.score(x_test, y_test))
 print(clf.predict(x_test.iloc[10:11, :]))
 print(y_test.iloc[11])
 
+get_initial_topology()
 # perturb and predict
-for s in range(1, num_iterations*10):
-    perturb()
+for s in range(1, num_iterations * 10):
+
+    perturb(200)
     # convert grid to list
     adj_mat = np.ndarray.flatten(np.triu(nx.to_scipy_sparse_matrix(new_grid).todense()))
+    draw_topology(new_grid)
     data_sample = np.append(adj_mat, app_mapping_suggested)
     # data_sample = np.append(data_sample, int(objective))
 
@@ -359,4 +363,3 @@ for s in range(1, num_iterations*10):
     # restart Greedy search with new starting point
 
 print("Final Prediction: " + str(prediction))
-
