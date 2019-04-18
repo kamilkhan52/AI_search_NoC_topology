@@ -29,7 +29,7 @@ def get_initial_topology():
 
 def reset_temperature():
     global temperature
-    temperature = 20
+    temperature = 5
 
 
 def draw_topology():
@@ -267,7 +267,7 @@ firstSTAGE = True
 reset_temperature()
 num_iterations = 5
 num_iterations_stage = 5
-temperature_threshold = 0.1
+temperature_threshold = 0.5
 alpha = 0.90  # temperature decay
 # read traffic data
 traffic_data = np.loadtxt('traffic_uniform.csv', dtype=float, delimiter=',')
@@ -331,7 +331,7 @@ print(clf.predict(x_test.iloc[10:11, :]))
 print(y_test.iloc[11])
 
 # perturb and predict
-for s in range(1, num_iterations):
+for s in range(1, num_iterations*10):
     perturb()
     # convert grid to list
     adj_mat = np.ndarray.flatten(np.triu(nx.to_scipy_sparse_matrix(new_grid).todense()))
@@ -356,4 +356,7 @@ for s in range(1, num_iterations):
     else:
         print("Prediction rejected: " + str(prediction) + " because Previous prediction = " + str(previous_prediction))
 
+    # restart Greedy search with new starting point
+
 print("Final Prediction: " + str(prediction))
+
