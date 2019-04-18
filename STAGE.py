@@ -29,7 +29,7 @@ def get_initial_topology():
 
 def reset_temperature():
     global temperature
-    temperature = 5
+    temperature = 50
 
 
 def draw_topology(grid):
@@ -266,12 +266,12 @@ def iterate(n):
 firstTime = True
 firstSTAGE = True
 reset_temperature()
-num_iterations = 5
-num_iterations_stage = 5
-temperature_threshold = 0.5
+num_iterations = 10
+num_iterations_stage = 50
+temperature_threshold = 0.1
 alpha = 0.90  # temperature decay
 # read traffic data
-traffic_data = np.loadtxt('traffic_uniform.csv', dtype=float, delimiter=',')
+traffic_data = np.loadtxt('traffic_complement.csv', dtype=float, delimiter=',')
 traffic_data_dict_square = {}
 app_mapping = np.arange(0, 64)
 app_mapping_suggested = app_mapping
@@ -335,7 +335,7 @@ get_initial_topology()
 # perturb and predict
 for s in range(1, num_iterations * 10):
 
-    perturb(200)
+    perturb(20)
     # convert grid to list
     adj_mat = np.ndarray.flatten(np.triu(nx.to_scipy_sparse_matrix(new_grid).todense()))
     draw_topology(new_grid)

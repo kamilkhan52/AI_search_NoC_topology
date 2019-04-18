@@ -224,7 +224,7 @@ def iterate(n):
         else:
             probability = math.exp(- abs((objective - previous_objective)) / temperature)
             #
-            print("probability: " + str(probability))
+            # print("probability: " + str(probability))
             # accept change with probability
             if random.random() < probability:
                 # keep change, grid=new_grid
@@ -257,7 +257,7 @@ num_iterations = 25
 temperature_threshold = 0.1
 alpha = 0.90  # temperature decay
 # read traffic data
-traffic_data = np.loadtxt('traffic_uniform.csv', dtype=float, delimiter=',')
+traffic_data = np.loadtxt('traffic_complement.csv', dtype=float, delimiter=',')
 traffic_data_dict_square = {}
 app_mapping = np.arange(0, 64)
 app_mapping_suggested = app_mapping
