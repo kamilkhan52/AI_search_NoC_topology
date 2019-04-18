@@ -4,7 +4,10 @@ import matplotlib.pyplot as plt
 from scipy.spatial import distance
 import math as math
 import random
+import pandas as pd
 from matplotlib.pyplot import plot, ion, show
+from sklearn.model_selection import train_test_split
+from sklearn import svm
 
 
 def get_initial_topology():
@@ -22,6 +25,11 @@ def get_initial_topology():
         for dest in traffic_data_dict:
             traffic_data_dict_square[source + dest] = traffic_data[8 * source[1] + source[0]][8 * dest[1] + dest[0]]
     # print("traffic_data_dict_square=" + str(len(traffic_data_dict_square)) + str(traffic_data_dict_square))
+
+
+def reset_temperature():
+    global temperature
+    temperature = 20
 
 
 def draw_topology():
@@ -109,6 +117,12 @@ def swap_app(app1, app2):
 
     traffic_data_suggested = traffic_data[:, app_mapping_suggested]
     traffic_data_suggested[[app1, app2]] = traffic_data_suggested[[app2, app1]]
+    temp_app1_to_app2 = traffic_data_suggested[app1][app1].copy()
+    temp_app2_to_app1 = traffic_data_suggested[app2][app2].copy()
+    traffic_data_suggested[app2][app1] = temp_app2_to_app1.copy()
+    traffic_data_suggested[app1][app2] = temp_app1_to_app2.copy()
+    temp_app1_to_app2 = 0
+    temp_app2_to_app1 = 0
 
 
 def perturb():
@@ -205,6 +219,7 @@ def iterate(n):
     global app_mapping
     global firstTime
     global previous_objective
+    global sub_dataset
     global traffic_data
 
     for i in range(1, n):
@@ -213,35 +228,31 @@ def iterate(n):
 
         if firstTime:
             previous_objective = objective
-            firstTime = False
 
         if objective <= previous_objective:
             # keep change, grid=new_grid
             print("Keeping objective of " + str(objective) + " over previous objective of: " + str(previous_objective))
             previous_objective = objective
             grid = new_grid.copy()
-            app_mapping = app_mapping_suggested
-        else:
-            probability = math.exp(- abs((objective - previous_objective)) / temperature)
-            #
-            print("probability: " + str(probability))
-            # accept change with probability
-            if random.random() < probability:
-                # keep change, grid=new_grid
-                print("Lucky. Keeping objective of " + str(objective) + " over previous objective of: " + str(
-                    previous_objective))
-                previous_objective = objective
-                grid = new_grid.copy()
-                app_mapping = app_mapping_suggested.copy()
-                traffic_data = traffic_data_suggested.copy()
-                app_mapping = app_mapping_suggested
+            app_mapping = app_mapping_suggested.copy()
+            traffic_data = traffic_data_suggested.copy()
+            adj_mat = np.ndarray.flatten(np.triu(nx.to_scipy_sparse_matrix(grid).todense()))
+            data_sample = np.append(adj_mat, app_mapping)
+            data_sample = np.append(data_sample, int(objective))
+            if firstTime:
+                sub_dataset = data_sample.copy()
+                firstTime = False
             else:
-                new_grid = grid.copy()
-                print(
-                    "Rejecting objective of " + str(objective) + " over previous objective of: " + str(
-                        previous_objective))
+                sub_dataset = np.vstack([sub_dataset, data_sample])
+                # print(sub_dataset)
 
-        draw_topology()
+        else:
+            new_grid = grid.copy()
+            print(
+                "Rejecting objective of " + str(objective) + " over previous objective of: " + str(
+                    previous_objective))
+
+        # draw_topology()
         perturb()
 
     if temperature > temperature_threshold:
@@ -252,8 +263,10 @@ def iterate(n):
 
 # start here
 firstTime = True
-temperature = 200
-num_iterations = 25
+firstSTAGE = True
+reset_temperature()
+num_iterations = 5
+num_iterations_stage = 5
 temperature_threshold = 0.1
 alpha = 0.90  # temperature decay
 # read traffic data
@@ -262,7 +275,11 @@ traffic_data_dict_square = {}
 app_mapping = np.arange(0, 64)
 app_mapping_suggested = app_mapping
 previous_objective = 0
+previous_prediction = 0
 
+# np.set_printoptions(threshold=np.inf)
+sub_dataset = []
+dataset = []
 traffic_data_suggested = traffic_data
 
 # get initial mesh topology
@@ -276,5 +293,67 @@ iterate(num_iterations)
 plt.clf()
 pos = dict(zip(grid, grid))
 nx.draw(grid, pos, with_labels=True)
-plt.show()
+# plt.show()
 print("Final traffic weighted hop count = " + str(previous_objective))
+print("Final app mapping = " + str(app_mapping))
+
+# STAGE
+# reset temperature and append dataset with sub_dataset
+if firstSTAGE:
+    sub_dataset[:, 4160] = objective
+    dataset = sub_dataset.copy()
+    firstSTAGE = False
+
+# reiterate for stage
+for i in range(1, num_iterations_stage):
+    sub_dataset[:, 4160] = objective
+    reset_temperature()
+    dataset = np.vstack([dataset, sub_dataset])  # add new sub_dataset to global dataset
+    get_initial_topology()
+    new_grid = grid.copy()
+    objective = 0
+    firstTime = True
+    iterate(num_iterations)
+
+np.savetxt("export.csv", dataset, delimiter=",")
+read_data = pd.read_csv('export.csv', sep=',')
+
+features = read_data.iloc[:, 0: 4160]
+label = read_data.iloc[:, 4160]
+
+x_train, x_test, y_train, y_test = train_test_split(features, label)
+
+clf = svm.SVR(gamma='auto')
+clf.fit(features, label)
+
+print(clf.score(x_test, y_test))
+print(clf.predict(x_test.iloc[10:11, :]))
+print(y_test.iloc[11])
+
+# perturb and predict
+for s in range(1, num_iterations):
+    perturb()
+    # convert grid to list
+    adj_mat = np.ndarray.flatten(np.triu(nx.to_scipy_sparse_matrix(new_grid).todense()))
+    data_sample = np.append(adj_mat, app_mapping_suggested)
+    # data_sample = np.append(data_sample, int(objective))
+
+    # predict objective function
+    # features_grid = data_sample[:4160]
+    data_sample = data_sample.reshape(1, -1)
+    prediction = clf.predict(data_sample)
+    print("Prediction for current grid: " + str(prediction))
+    if previous_prediction == 0:
+        previous_prediction = prediction
+        grid = new_grid.copy()
+
+    if prediction < previous_prediction:
+        # accept perturbation
+        grid = new_grid.copy()
+        app_mapping = app_mapping_suggested.copy()
+        traffic_data = traffic_data_suggested.copy()
+        previous_prediction = prediction
+    else:
+        print("Prediction rejected: " + str(prediction) + " because Previous prediction = " + str(previous_prediction))
+
+print("Final Prediction: " + str(prediction))
