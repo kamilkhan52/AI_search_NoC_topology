@@ -12,17 +12,17 @@ from sklearn import svm
 import networkx as nx
 
 # load dataset
-wine = pd.read_csv('winequality-red.csv', sep=';')
+# wine = pd.read_csv('winequality-red.csv', sep=';')
 
-X = wine.iloc[:, 1: 11]
-Y = wine.iloc[:, 11]
+# X = wine.iloc[:, 1: 11]
+# Y = wine.iloc[:, 11]
+#
+# x_train, x_test, y_train, y_test = train_test_split(X, Y)
+#
+# clf = svm.SVR(gamma='auto')
+# clf.fit(X, Y)
 
-x_train, x_test, y_train, y_test = train_test_split(X, Y)
-
-clf = svm.SVR(gamma='auto')
-clf.fit(X, Y)
-
-print(clf.score(x_test, y_test))
+# print(clf.score(x_test, y_test))
 
 grid = nx.grid_2d_graph(8, 8)
 pos = dict(zip(grid, grid))
