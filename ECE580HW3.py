@@ -74,7 +74,7 @@ def get_obj_function():
 
             # print("objective_dict: " + str(objective_dict))
             except Exception:
-                pass
+                objective_dict[source_node + destination_node] = 9999999
 
     objective = sum(objective_dict.values())
     objective_dict.clear()
@@ -205,6 +205,7 @@ def iterate(n):
     global app_mapping
     global firstTime
     global previous_objective
+    global traffic_data
 
     for i in range(1, n):
         get_obj_function()
@@ -216,27 +217,26 @@ def iterate(n):
 
         if objective <= previous_objective:
             # keep change, grid=new_grid
-            print("Keeping objective of " + str(objective) + " over previous objective of: " + str(previous_objective))
+            print("↓Objective: " + str(round(objective, 2)))
             previous_objective = objective
             grid = new_grid.copy()
             app_mapping = app_mapping_suggested
         else:
             probability = math.exp(- abs((objective - previous_objective)) / temperature)
             #
-            print("probability: " + str(probability))
+            # print("probability: " + str(probability))
             # accept change with probability
             if random.random() < probability:
                 # keep change, grid=new_grid
-                print("Lucky. Keeping objective of " + str(objective) + " over previous objective of: " + str(
-                    previous_objective))
+                print("↓Objective: " + str(round(objective, 2)))
                 previous_objective = objective
                 grid = new_grid.copy()
+                app_mapping = app_mapping_suggested.copy()
+                traffic_data = traffic_data_suggested.copy()
                 app_mapping = app_mapping_suggested
             else:
                 new_grid = grid.copy()
-                print(
-                    "Rejecting objective of " + str(objective) + " over previous objective of: " + str(
-                        previous_objective))
+                print("-Objective: " + str(round(objective, 2)))
 
         draw_topology()
         perturb()
@@ -249,12 +249,12 @@ def iterate(n):
 
 # start here
 firstTime = True
-temperature = 200
-num_iterations = 25
+temperature = 100
+num_iterations = 20
 temperature_threshold = 0.1
-alpha = 0.90  # temperature decay
+alpha = 0.70  # temperature decay
 # read traffic data
-traffic_data = np.loadtxt('traffic_uniform.csv', dtype=float, delimiter=',')
+traffic_data = np.loadtxt('traffic_complement.csv', dtype=float, delimiter=',')
 traffic_data_dict_square = {}
 app_mapping = np.arange(0, 64)
 app_mapping_suggested = app_mapping
@@ -272,6 +272,7 @@ iterate(num_iterations)
 # final solution
 plt.clf()
 pos = dict(zip(grid, grid))
-nx.draw(grid, pos, with_labels=True)
+nx.draw(grid, pos, font_size=6)
 plt.show()
 print("Final traffic weighted hop count = " + str(previous_objective))
+print("Final app mapping = " + str(app_mapping))
